@@ -146,8 +146,8 @@
                         <input type="password" id="auth-password" required placeholder="Enter password" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none themed-border mt-1 transition-colors">
                     </div>
                     
-                    <!-- SMALL ERROR MESSAGE DISPLAY -->
-                    <p id="auth-error" class="text-red-400 text-xs font-semibold text-center hidden bg-red-500/10 py-2 rounded-lg"></p>
+                    <!-- DYNAMIC MESSAGE DISPLAY -->
+                    <p id="auth-error" class="text-xs font-semibold text-center hidden py-2 rounded-lg px-2"></p>
                     
                     <button type="submit" id="auth-submit-btn" class="w-full py-4 rounded-xl themed-bg text-white font-bold text-sm transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer mt-2 shadow-[0_0_20px_var(--ambient-1)]">Sign In</button>
                 </form>
@@ -481,16 +481,13 @@
         </div>
     </div>
 
-    <!-- SUPABASE IMPORT MODULE (No external JS files required) -->
+    <!-- SUPABASE IMPORT MODULE -->
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
         const SUPABASE_URL = "https://fpoelufipfjbxfjxfzwc.supabase.co";
         const SUPABASE_PUBLIC_KEY = "sb_publishable_5lCYSTpaON8uj6N2DGwaYA_-Dh-EG8W";
         
-        // Attach Supabase to the global window object so our existing app logic can use it
         window.supabase = createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY);
-        
-        // Start auth check after initialization
         checkAuth();
     </script>
 
@@ -516,6 +513,7 @@
 
         async function checkAuth() {
             if (!window.supabase) { setTimeout(checkAuth, 50); return; }
+            
             const { data: { session } } = await window.supabase.auth.getSession();
             
             if (session) {
@@ -525,6 +523,7 @@
                 document.getElementById('welcome-text').classList.remove('hidden');
                 switchView('home');
             } else {
+                currentUser = null;
                 switchView('auth');
             }
         }
@@ -532,9 +531,9 @@
         function toggleAuthMode() {
             isSignUpMode = !isSignUpMode;
             
-            // Toggle form fields
             const nameGroup = document.getElementById('name-group');
             const nameInput = document.getElementById('auth-name');
+            const errorEl = document.getElementById('auth-error');
             
             if (isSignUpMode) {
                 nameGroup.classList.remove('hidden');
@@ -544,12 +543,12 @@
                 nameInput.removeAttribute('required');
             }
 
-            // Update UI text
             document.getElementById('auth-title').innerText = isSignUpMode ? 'Create Account' : 'Welcome Back';
             document.getElementById('auth-subtitle').innerText = isSignUpMode ? 'Join VibeStudio to save to cloud.' : 'Sign in to sync your audio projects.';
             document.getElementById('auth-submit-btn').innerText = isSignUpMode ? 'Sign Up' : 'Sign In';
             document.getElementById('auth-toggle-btn').innerHTML = isSignUpMode ? 'Already have an account? <span class="themed-text font-bold">Sign in</span>' : 'Don\'t have an account? <span class="themed-text font-bold">Sign up</span>';
-            document.getElementById('auth-error').classList.add('hidden');
+            
+            errorEl.classList.add('hidden');
         }
 
         async function handleAuth(e) {
@@ -561,6 +560,8 @@
             
             errorEl.innerText = "";
             errorEl.classList.add('hidden');
+            errorEl.classList.remove('text-green-400', 'bg-green-500/10');
+            errorEl.classList.add('text-red-400', 'bg-red-500/10');
 
             if(!email || !password || (isSignUpMode && !name)) {
                 errorEl.innerText = "Please fill all fields."; 
@@ -571,7 +572,6 @@
             showLoader("AUTHENTICATING", "Connecting to server...", 50);
             
             if (isSignUpMode) {
-                // Supabase Sign Up (Includes Name as metadata)
                 const { data, error } = await window.supabase.auth.signUp({
                     email: email,
                     password: password,
@@ -582,17 +582,29 @@
                     errorEl.innerText = error.message; 
                     errorEl.classList.remove('hidden'); 
                 } else { 
-                    currentUser = data.user;
-                    if (currentUser) {
-                        const displayName = currentUser.user_metadata?.full_name || currentUser.email;
-                        document.getElementById('welcome-text').innerText = `Welcome, ${displayName}`;
-                        document.getElementById('welcome-text').classList.remove('hidden');
-                    }
-                    window.history.pushState({}, '', '/');
-                    switchView('home'); 
+                    // Prevent auto-login explicitly if a session was created.
+                    if (data.session) await window.supabase.auth.signOut();
+                    
+                    // Switch back to Sign In view visually
+                    isSignUpMode = false;
+                    document.getElementById('name-group').classList.add('hidden');
+                    document.getElementById('auth-name').removeAttribute('required');
+                    document.getElementById('auth-title').innerText = 'Welcome Back';
+                    document.getElementById('auth-subtitle').innerText = 'Sign in to sync your audio projects.';
+                    document.getElementById('auth-submit-btn').innerText = 'Sign In';
+                    document.getElementById('auth-toggle-btn').innerHTML = 'Don\'t have an account? <span class="themed-text font-bold">Sign up</span>';
+                    
+                    // Securely clear fields but leave email intact
+                    document.getElementById('auth-password').value = '';
+                    document.getElementById('auth-name').value = '';
+
+                    // Show success message
+                    errorEl.classList.remove('text-red-400', 'bg-red-500/10');
+                    errorEl.classList.add('text-green-400', 'bg-green-500/10');
+                    errorEl.innerText = "Signup successful! Please check your email to confirm your account, then sign in."; 
+                    errorEl.classList.remove('hidden');
                 }
             } else {
-                // Supabase Sign In
                 const { data, error } = await window.supabase.auth.signInWithPassword({
                     email: email,
                     password: password
@@ -601,7 +613,7 @@
                 if (error) { 
                     errorEl.innerText = error.message; 
                     errorEl.classList.remove('hidden'); 
-                } else {
+                } else if (data.session) {
                     currentUser = data.user;
                     const displayName = currentUser.user_metadata?.full_name || currentUser.email;
                     document.getElementById('welcome-text').innerText = `Welcome, ${displayName}`;
@@ -619,10 +631,12 @@
             currentUser = null;
             closeModal('modal-profile');
             
-            // Clear inputs securely
             document.getElementById('auth-name').value = '';
             document.getElementById('auth-email').value = '';
             document.getElementById('auth-password').value = '';
+
+            const errorEl = document.getElementById('auth-error');
+            errorEl.classList.add('hidden');
 
             if(isPlaying) stopAudio();
             audioBuffer = null; 
@@ -662,10 +676,17 @@
         function hideLoader() { document.getElementById('loader').classList.add('hidden'); document.getElementById('loader').classList.remove('flex'); }
 
         function switchView(view) {
+            // Check auth state before routing
+            if (view !== 'auth' && !currentUser) {
+                view = 'auth'; // Force login
+            }
+
             const nav = document.getElementById('bottom-nav');
             if (view === 'auth') nav.style.display = 'none'; else nav.style.display = 'flex';
+            
             document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${view}`).classList.add('active');
+            
             ['home','studio','visuals','library'].forEach(v => {
                 const tab = document.getElementById(`tab-${v}`);
                 if (tab) { tab.classList.remove('text-white'); tab.classList.add('text-white/50'); }
@@ -1166,4 +1187,4 @@
         applyLightMode();
     </script>
 </body>
-</html>
+                    </html>
