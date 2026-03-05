@@ -56,6 +56,11 @@
         .expandable { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease; } .expandable.open { grid-template-rows: 1fr; } .expandable-inner { overflow: hidden; }
         .waveform-container { background-color: var(--input-bg); border-radius: var(--radius-md); border: 1px solid var(--border-color); }
         .banner-bg { background-position: center; background-size: cover; background-color: var(--surface-hover); }
+
+        /* Custom scrollbar for modal content */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 10px; }
     </style>
 </head>
 <body class="flex items-center justify-center h-[100dvh]">
@@ -107,7 +112,7 @@
             <div class="p-6 md:p-8 flex flex-col gap-8 w-full md:max-w-2xl">
                 <div>
                     <h2 class="label-text mb-4">Create New Track</h2>
-                    <button onclick="const fi = document.getElementById('file-input'); if(fi) fi.click();" class="w-full surface-card flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] transition-colors border-dashed border-2">
+                    <button onclick="app.subscription.handleNewTrackClick()" class="w-full surface-card flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[var(--surface-hover)] transition-colors border-dashed border-2">
                         <div class="w-12 h-12 rounded-full bg-[var(--input-bg)] text-primary flex items-center justify-center"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></div>
                         <div class="text-center"><h3 class="font-semibold text-primary">Import Audio</h3><p class="text-xs text-secondary mt-1">MP3, WAV, M4A supported</p></div>
                     </button>
@@ -178,7 +183,6 @@
 
             <div class="flex-1 overflow-y-auto no-scrollbar pb-[140px] md:pb-32 w-full md:flex md:flex-row md:gap-8 md:p-6 p-4">
                 
-                <!-- Left Column -->
                 <div class="md:w-[45%] md:flex md:flex-col shrink-0">
                     <div class="mb-6">
                         <div class="flex justify-between items-end mb-3">
@@ -216,7 +220,6 @@
                     </div>
                 </div>
 
-                <!-- Right Column -->
                 <div class="space-y-4 pb-6 md:w-[55%] flex-1 mt-6 md:mt-0">
                     
                     <div class="surface-card space-y-4">
@@ -238,7 +241,10 @@
                         <input type="range" id="slider-width" class="daw-slider" min="90" max="115" step="1" value="100">
                         <div class="pt-2 border-t border-[var(--border-color)]">
                             <div class="flex justify-between items-center mb-4">
-                                <div><div class="text-sm font-semibold text-primary">Immersive 8D</div><div class="text-[10px] text-secondary mt-0.5">Slow spatial rotation</div></div>
+                                <div>
+                                    <div class="text-sm font-semibold text-primary flex items-center gap-2">Immersive 8D <span class="text-[8px] bg-amber-500/20 text-amber-500 px-1 py-0.5 rounded font-bold uppercase">Elite</span></div>
+                                    <div class="text-[10px] text-secondary mt-0.5">Slow spatial rotation</div>
+                                </div>
                                 <div><input type="checkbox" id="toggle-pan8d" class="toggle-checkbox"/><label for="toggle-pan8d" class="toggle-label"></label></div>
                             </div>
                             <div class="flex items-center gap-4"><span class="text-[10px] font-semibold text-secondary w-16">8D INTENSITY</span><input type="range" id="slider-intensity8d" class="daw-slider flex-1" min="0" max="100" step="1" value="25"><span id="val-intensity8d" class="text-[10px] font-mono text-secondary w-10 text-right">25%</span></div>
@@ -249,7 +255,7 @@
                 </div>
             </div>
             <div class="absolute bottom-24 right-4 z-20" id="btn-export-master">
-                <button onclick="app.studio.audioEngine.exportTrack()" class="btn-primary w-auto rounded-full px-6 flex items-center justify-center gap-2 shadow-lg"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Export Master</button>
+                <button onclick="app.subscription.handleExportClick()" class="btn-primary w-auto rounded-full px-6 flex items-center justify-center gap-2 shadow-lg"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Export Master</button>
             </div>
         </div>
 
@@ -275,12 +281,15 @@
                     </div>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold text-primary flex items-center gap-2" id="profile-name">Loading... <span id="profile-verified" class="hidden text-accent"><svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z"/></svg></span></h1>
+                    <h1 class="text-2xl font-bold text-primary flex items-center gap-2 flex-wrap" id="profile-name-container">
+                        <span id="profile-name">Loading...</span> 
+                        <span id="profile-verified" class="hidden text-accent"><svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z"/></svg></span>
+                        <span id="profile-plan-badge"></span>
+                    </h1>
                     <p class="text-secondary text-sm font-medium">@<span id="profile-username">username</span></p>
                 </div>
                 <p class="text-primary text-sm mt-4 max-w-xl" id="profile-bio">No bio provided yet.</p>
                 
-                <!-- NEW FEATURE: Clickable Followers & Following Stats -->
                 <div class="flex gap-6 mt-6">
                     <div class="text-center">
                         <p class="text-lg font-bold text-primary" id="stat-total-plays">0</p>
@@ -296,6 +305,29 @@
                     </div>
                 </div>
             </header>
+
+            <div id="profile-analytics-container" class="px-6 mb-6 hidden">
+                <div class="surface-card p-5 border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/5 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-[var(--accent-color)] opacity-10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                    <h4 class="text-xs font-bold text-accent uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+                        Creator Analytics Dashboard
+                    </h4>
+                    <div class="grid grid-cols-2 gap-4 relative z-10">
+                        <div class="bg-[var(--surface-color)] p-4 rounded-xl border border-[var(--border-color)]">
+                            <p class="text-[10px] text-secondary font-semibold uppercase mb-1">Total Uploads</p>
+                            <p class="text-xl font-bold text-primary" id="analytics-uploads">0</p>
+                        </div>
+                        <div class="bg-[var(--surface-color)] p-4 rounded-xl border border-[var(--border-color)]">
+                            <p class="text-[10px] text-secondary font-semibold uppercase mb-1">Total Likes</p>
+                            <p class="text-xl font-bold text-primary" id="analytics-likes">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UX UPDATE: Profile Upgrade Card Container -->
+            <div id="profile-upgrade-card-container" class="hidden"></div>
 
             <div class="px-6 flex gap-4 border-b border-[var(--border-color)]">
                 <button onclick="app.social.switchProfileTab('tracks')" id="tab-profile-tracks" class="text-sm font-semibold pb-2 border-b-2 border-accent text-primary">Tracks</button>
@@ -338,6 +370,14 @@
         </div>
 
         <!-- ================= EXTENSION MODALS ================= -->
+        <!-- Loader Display -->
+        <div id="loader" class="hidden absolute inset-0 z-[300] bg-[var(--bg-color)] bg-opacity-90 backdrop-blur-sm flex-col items-center justify-center pointer-events-none">
+            <div class="w-12 h-12 border-4 border-[var(--surface-hover)] border-t-[var(--accent-color)] rounded-full animate-spin mb-4"></div>
+            <h3 class="text-sm font-bold tracking-wider text-primary" id="loader-text">LOADING</h3>
+            <p class="text-xs text-secondary mt-1" id="loader-sub">Please wait...</p>
+            <div class="w-48 h-1 bg-[var(--surface-hover)] rounded-full mt-4 overflow-hidden"><div class="h-full bg-[var(--accent-color)] w-0 transition-all duration-300" id="loader-progress-bar"></div></div>
+        </div>
+
         <!-- Search Modal -->
         <div id="modal-search" class="bottom-sheet"><div class="bottom-sheet-backdrop" onclick="app.ui.closeModal('modal-search')"></div>
             <div class="bottom-sheet-content p-6 space-y-4 h-[80dvh] flex flex-col">
@@ -361,7 +401,7 @@
             </div>
         </div>
 
-        <!-- NEW FEATURE: Follows Modal -->
+        <!-- Follows Modal -->
         <div id="modal-follows" class="bottom-sheet"><div class="bottom-sheet-backdrop" onclick="app.ui.closeModal('modal-follows')"></div>
             <div class="bottom-sheet-content p-6 space-y-4 h-[80dvh] flex flex-col">
                 <div class="flex justify-between items-center shrink-0">
@@ -387,9 +427,44 @@
             </div>
         </div>
 
-        <!-- Existing Modals -->
-        <div id="modal-app-settings" class="bottom-sheet"><div class="bottom-sheet-backdrop" onclick="app.ui.closeModal('modal-app-settings')"></div><div class="bottom-sheet-content p-6 space-y-6"><div class="flex justify-between items-center mb-2"><h3 class="text-lg font-bold text-primary">Settings</h3><button onclick="app.ui.closeModal('modal-app-settings')" class="btn-icon"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><div class="pt-2"><button onclick="app.auth.logoutUser()" class="w-full py-3 rounded-[12px] bg-red-500/10 text-red-500 font-semibold text-sm transition-colors hover:bg-red-500/20 border border-red-500/20">Sign Out</button></div></div></div>
+        <!-- Subscription Upgrade Modal -->
+        <div id="modal-subscription" class="bottom-sheet"><div class="bottom-sheet-backdrop" onclick="app.ui.closeModal('modal-subscription')"></div>
+            <div class="bottom-sheet-content p-6 space-y-4 h-[85dvh] flex flex-col bg-[var(--bg-color)]">
+                <div class="flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="text-xl font-bold text-primary">Upgrade Plan</h3>
+                        <p class="text-xs text-secondary mt-1">Unlock limits and creator tools.</p>
+                    </div>
+                    <button onclick="app.ui.closeModal('modal-subscription')" class="btn-icon bg-[var(--surface-color)] border border-[var(--border-color)]"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+                </div>
+                
+                <div class="flex justify-center shrink-0 py-2">
+                    <div class="bg-[var(--surface-color)] border border-[var(--border-color)] rounded-full p-1 inline-flex">
+                        <button onclick="app.subscription.setBilling(true)" id="sub-btn-monthly" class="px-6 py-1.5 rounded-full text-xs font-semibold bg-[var(--accent-color)] text-white transition-all">Monthly</button>
+                        <button onclick="app.subscription.setBilling(false)" id="sub-btn-yearly" class="px-6 py-1.5 rounded-full text-xs font-semibold text-secondary hover:text-primary transition-all">Yearly (-20%)</button>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto custom-scroll space-y-4 pb-10" id="subscription-cards-container">
+                    <!-- Injected dynamically by app.subscription.renderModal() -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="modal-app-settings" class="bottom-sheet"><div class="bottom-sheet-backdrop" onclick="app.ui.closeModal('modal-app-settings')"></div>
+            <div class="bottom-sheet-content p-6 space-y-6">
+                <div class="flex justify-between items-center mb-2"><h3 class="text-lg font-bold text-primary">Settings</h3><button onclick="app.ui.closeModal('modal-app-settings')" class="btn-icon"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+                <div class="space-y-3 pt-2">
+                    <button onclick="app.ui.closeModal('modal-app-settings'); app.subscription.openModal();" class="w-full py-3 rounded-[12px] bg-[var(--surface-hover)] border border-[var(--border-color)] text-primary font-semibold text-sm transition-colors hover:border-[var(--accent-color)] flex items-center justify-between px-4">
+                        <span>Manage Subscription</span> <span id="settings-current-plan" class="text-xs text-accent font-bold uppercase">FREE</span>
+                    </button>
+                    <button onclick="app.auth.logoutUser()" class="w-full py-3 rounded-[12px] bg-red-500/10 text-red-500 font-semibold text-sm transition-colors hover:bg-red-500/20 border border-red-500/20">Sign Out</button>
+                </div>
+            </div>
+        </div>
         
+        <!-- Studio Options Modal -->
         <div id="modal-studio-menu" class="bottom-sheet"><div class="bottom-sheet-backdrop" onclick="app.ui.closeModal('modal-studio-menu')"></div><div class="bottom-sheet-content p-6 space-y-4 pb-8"><div class="flex justify-between items-center mb-2"><h3 class="text-lg font-bold text-primary">Project Options</h3><button onclick="app.ui.closeModal('modal-studio-menu')" class="btn-icon"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div><button onclick="app.library.saveProjectToLibrary()" class="w-full surface-card p-4 flex items-center gap-4 hover:bg-[var(--surface-hover)] transition-colors"><div class="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div><div class="text-left flex-1"><h4 class="font-semibold text-sm text-primary">Update Preset to Cloud</h4><p class="text-xs text-secondary mt-1">Save current effects</p></div></button><button onclick="app.studio.presets.applyScalablePreset('Studio Neutral'); app.ui.closeModal('modal-studio-menu');" class="w-full surface-card p-4 flex items-center gap-4 hover:bg-[var(--surface-hover)] transition-colors"><div class="w-10 h-10 rounded-full bg-[var(--input-bg)] text-secondary flex items-center justify-center"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></div><div class="text-left flex-1"><h4 class="font-semibold text-sm text-primary">Reset Effects</h4><p class="text-xs text-secondary mt-1">Return sliders to zero</p></div></button></div></div>
 
         <!-- Edit Profile Modal -->
@@ -408,17 +483,22 @@
             app.auth.checkAuth();
             app.studio.UI.init(); 
             app.search.init();
+            app.explorePlayer.init(); // UX UPDATE
         });
     </script>
 
     <!-- App Modular Architecture -->
     <script>
+        // ==========================================
+        // CORE STATE & UTILITIES
+        // ==========================================
         const app = {
             state: {
                 currentUser: null,
                 activeProfileId: null,
                 currentEditingProfile: null,
                 rawFileBlob: null,
+                userPlan: 'free'
             },
             utils: {
                 generateUUID: () => {
@@ -448,7 +528,217 @@
         };
 
         // ==========================================
-        // EXTENSION: SEARCH MODULE
+        // UX UPDATE: EXPLORE INLINE PLAYER
+        // ==========================================
+        app.explorePlayer = {
+            audio: new Audio(),
+            currentTrackId: null,
+            observer: null,
+            init: () => {
+                app.explorePlayer.audio.addEventListener('timeupdate', app.explorePlayer.updateProgress);
+                app.explorePlayer.audio.addEventListener('ended', app.explorePlayer.onEnded);
+                app.explorePlayer.observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if(!entry.isIntersecting && entry.target.dataset.trackId === app.explorePlayer.currentTrackId && !app.explorePlayer.audio.paused) {
+                            app.explorePlayer.pause();
+                        }
+                    });
+                }, { threshold: 0.1 });
+            },
+            toggle: async (trackId, filePath) => {
+                if(app.explorePlayer.currentTrackId === trackId) {
+                    if(app.explorePlayer.audio.paused) app.explorePlayer.audio.play();
+                    else app.explorePlayer.pause();
+                    app.explorePlayer.updateUI();
+                    return;
+                }
+                
+                app.explorePlayer.pause();
+                app.explorePlayer.currentTrackId = trackId;
+                
+                document.querySelectorAll('.explore-play-icon').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.explore-pause-icon').forEach(el => el.classList.add('hidden'));
+
+                try {
+                    const { data, error } = await window.supabase.storage.from('app-files').createSignedUrl(filePath, 3600);
+                    if(error) throw error;
+                    app.explorePlayer.audio.src = data.signedUrl;
+                    app.explorePlayer.audio.play();
+                    
+                    const card = document.getElementById(`explore-card-${trackId}`);
+                    if(card) app.explorePlayer.observer.observe(card);
+                    
+                    app.explorePlayer.updateUI();
+                } catch(e) { console.error("Preview error", e); app.ui.showToast("Failed to preview audio."); }
+            },
+            pause: () => {
+                app.explorePlayer.audio.pause();
+                app.explorePlayer.updateUI();
+            },
+            updateProgress: () => {
+                if(!app.explorePlayer.currentTrackId) return;
+                const id = app.explorePlayer.currentTrackId;
+                const progressEl = document.getElementById(`explore-progress-${id}`);
+                const timeEl = document.getElementById(`explore-time-${id}`);
+                if(progressEl && app.explorePlayer.audio.duration) {
+                    const pct = (app.explorePlayer.audio.currentTime / app.explorePlayer.audio.duration) * 100;
+                    progressEl.style.width = `${pct}%`;
+                    if(timeEl) timeEl.innerText = app.studio.UI.formatTime(app.explorePlayer.audio.currentTime);
+                }
+            },
+            updateUI: () => {
+                const id = app.explorePlayer.currentTrackId;
+                if(!id) return;
+                const isPlaying = !app.explorePlayer.audio.paused;
+                const playIcon = document.getElementById(`explore-play-${id}`);
+                const pauseIcon = document.getElementById(`explore-pause-${id}`);
+                if(playIcon) playIcon.classList.toggle('hidden', isPlaying);
+                if(pauseIcon) pauseIcon.classList.toggle('hidden', !isPlaying);
+            },
+            onEnded: () => {
+                app.explorePlayer.updateUI();
+                const progressEl = document.getElementById(`explore-progress-${app.explorePlayer.currentTrackId}`);
+                if(progressEl) progressEl.style.width = '0%';
+            }
+        };
+
+        // ==========================================
+        // SUBSCRIPTIONS & LIMITS UI
+        // ==========================================
+        app.subscription = {
+            isMonthly: true,
+            fetchUserPlan: async () => {
+                if(!app.state.currentUser) return;
+                try {
+                    const { data, error } = await window.supabase.from('profiles').select('*').eq('id', app.state.currentUser.id).single();
+                    if (error) throw error;
+                    
+                    app.state.userPlan = data?.plan || 'free';
+                    if (app.ui && app.ui.setText) app.ui.setText('settings-current-plan', app.state.userPlan);
+                    if (!localStorage.getItem('vibe_exports_count')) localStorage.setItem('vibe_exports_count', 0);
+                } catch(e) { 
+                    console.warn("Could not fetch plan, defaulting to Free.");
+                    app.state.userPlan = 'free';
+                    if (app.ui && app.ui.setText) app.ui.setText('settings-current-plan', 'free');
+                }
+            },
+            openModal: () => {
+                app.subscription.renderModal();
+                app.ui.openModal('modal-subscription');
+            },
+            setBilling: (isMonthly) => {
+                app.subscription.isMonthly = isMonthly;
+                const mBtn = document.getElementById('sub-btn-monthly');
+                const yBtn = document.getElementById('sub-btn-yearly');
+                if(isMonthly) {
+                    mBtn.className = "px-6 py-1.5 rounded-full text-xs font-semibold bg-[var(--accent-color)] text-white transition-all";
+                    yBtn.className = "px-6 py-1.5 rounded-full text-xs font-semibold text-secondary hover:text-primary transition-all";
+                } else {
+                    yBtn.className = "px-6 py-1.5 rounded-full text-xs font-semibold bg-[var(--accent-color)] text-white transition-all";
+                    mBtn.className = "px-6 py-1.5 rounded-full text-xs font-semibold text-secondary hover:text-primary transition-all";
+                }
+                app.subscription.renderModal();
+            },
+            renderModal: () => {
+                const container = document.getElementById('subscription-cards-container');
+                if(!container) return;
+                
+                const planId = app.state.userPlan.toLowerCase();
+                const m = app.subscription.isMonthly;
+                
+                const makeCard = (id, name, price, features, isRecommended = false) => {
+                    const isCurrent = planId === id;
+                    let btnHtml = '';
+                    
+                    if (isCurrent) {
+                        btnHtml = `<button disabled class="w-full py-3 rounded-xl bg-[var(--surface-hover)] text-secondary font-semibold text-sm border border-[var(--border-color)] opacity-70">Current Plan</button>`;
+                    } else {
+                        btnHtml = `<button onclick="app.subscription.upgradePlan('${id}')" class="w-full py-3 rounded-xl font-semibold text-sm transition-opacity hover:opacity-90 ${isRecommended ? 'bg-[var(--accent-color)] text-white shadow-lg' : 'bg-[var(--surface-color)] text-primary border border-[var(--border-color)]'}">Upgrade to ${name}</button>`;
+                    }
+
+                    const recHtml = isRecommended ? `<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-[var(--accent-color)] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide shadow-md">Recommended</div>` : '';
+                    const borderCls = isRecommended ? 'border-[var(--accent-color)] border-2' : 'border-[var(--border-color)] border';
+                    const bgCls = isRecommended ? 'bg-[var(--accent-color)]/5' : 'bg-[var(--surface-color)]';
+
+                    const featHtml = features.map(f => `<div class="flex items-center gap-2"><svg width="14" height="14" fill="none" stroke="var(--accent-color)" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg><span class="text-sm text-primary">${f}</span></div>`).join('');
+
+                    return `
+                    <div class="relative surface-card ${borderCls} ${bgCls} p-6 shadow-sm">
+                        ${recHtml}
+                        <h4 class="text-lg font-bold text-primary mb-1">${name}</h4>
+                        <div class="flex items-end gap-1 mb-6">
+                            <span class="text-3xl font-bold text-primary">${price}</span>
+                            <span class="text-xs text-secondary mb-1">/${m ? 'mo' : 'yr'}</span>
+                        </div>
+                        <div class="space-y-3 mb-6">${featHtml}</div>
+                        ${btnHtml}
+                    </div>`;
+                };
+
+                const html = `
+                    ${makeCard('free', 'Free', '$0', ['1 GB Cloud Storage', 'Max 5 Projects', '10 Exports per month', 'Community Access'])}
+                    ${makeCard('pro', 'Pro', m ? '$9.99' : '$99.99', ['50 GB Cloud Storage', 'Unlimited Projects', 'Unlimited Exports', 'Pro Profile Badge', 'Creator Analytics'], true)}
+                    ${makeCard('elite', 'Elite', m ? '$24.99' : '$249.99', ['500 GB Cloud Storage', 'Elite Profile Badge', 'Early Feature Access (8D)', 'Priority Support'])}
+                `;
+                
+                container.innerHTML = html;
+            },
+            upgradePlan: async (newPlan) => {
+                if(!confirm(`Upgrade to ${newPlan.toUpperCase()}? (Mock Payment)`)) return;
+                app.ui.showLoader("UPGRADING", "Processing subscription...", 50);
+                try {
+                    const { error: profErr } = await window.supabase.from('profiles').update({ plan: newPlan }).eq('id', app.state.currentUser.id);
+                    if(profErr) throw profErr;
+                    
+                    const { error: subErr } = await window.supabase.from('subscriptions').insert([{
+                        user_id: app.state.currentUser.id,
+                        plan: newPlan,
+                        billing_cycle: app.subscription.isMonthly ? 'monthly' : 'yearly',
+                        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                    }]);
+                    if(subErr) throw subErr;
+
+                    app.state.userPlan = newPlan;
+                    app.ui.setText('settings-current-plan', newPlan);
+                    app.ui.closeModal('modal-subscription');
+                    app.ui.showToast(`Upgraded to ${newPlan.toUpperCase()}! 🚀`);
+                    
+                    if(app.state.activeProfileId === app.state.currentUser.id) app.social.loadProfile();
+                } catch(e) {
+                    alert("Upgrade failed: " + (e.message || "Unknown error. Did you run the SQL script?"));
+                } finally {
+                    app.ui.hideLoader();
+                }
+            },
+            handleNewTrackClick: async () => {
+                if(app.state.userPlan === 'free') {
+                    app.ui.showLoader("CHECKING", "Verifying limits...", 50);
+                    const { count } = await window.supabase.from('projects').select('*', {count: 'exact', head:true}).eq('user_id', app.state.currentUser.id);
+                    app.ui.hideLoader();
+                    if(count >= 5) {
+                        app.subscription.openModal();
+                        app.ui.showToast("Free plan limit reached (5 projects max).");
+                        return;
+                    }
+                }
+                const fi = document.getElementById('file-input'); if(fi) fi.click();
+            },
+            handleExportClick: () => {
+                if(app.state.userPlan === 'free') {
+                    let exports = parseInt(localStorage.getItem('vibe_exports_count') || '0');
+                    if(exports >= 10) {
+                        app.subscription.openModal();
+                        app.ui.showToast("Free limit reached (10 exports/month).");
+                        return;
+                    }
+                    localStorage.setItem('vibe_exports_count', exports + 1);
+                }
+                app.studio.audioEngine.exportTrack();
+            }
+        };
+
+        // ==========================================
+        // SEARCH MODULE
         // ==========================================
         app.search = {
             init: () => {
@@ -460,7 +750,7 @@
                 if(!query) return app.ui.setHTML('search-results', '');
                 app.ui.setHTML('search-results', '<p class="text-secondary text-sm text-center py-4">Searching...</p>');
                 try {
-                    const { data, error } = await window.supabase.from('profiles').select('id, username, display_name, avatar_url, is_verified').ilike('username', `%${query}%`).order('username').limit(20);
+                    const { data, error } = await window.supabase.from('profiles').select('*').ilike('username', `%${query}%`).order('username').limit(20);
                     if(error) throw error;
                     if(!data || data.length === 0) return app.ui.setHTML('search-results', '<p class="text-secondary text-sm text-center py-4">No users found.</p>');
                     
@@ -468,7 +758,9 @@
                         const safeName = app.utils.escapeHTML(u.display_name || 'U');
                         const safeUsername = app.utils.escapeHTML(u.username);
                         const avatar = u.avatar_url ? `<img src="${u.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-[var(--input-bg)] flex items-center justify-center text-primary font-bold">${safeName[0].toUpperCase()}</div>`;
-                        return `<div class="flex items-center gap-3 p-3 hover:bg-[var(--surface-hover)] cursor-pointer rounded-lg transition-colors border border-transparent hover:border-[var(--border-color)]" onclick="app.ui.closeModal('modal-search'); app.social.loadProfile('${safeUsername}')">${avatar}<div><p class="font-semibold text-sm text-primary flex items-center gap-1">${safeName} ${u.is_verified?'<span class="text-accent"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z"/></svg></span>':''}</p><p class="text-[10px] text-secondary">@${safeUsername}</p></div></div>`;
+                        const isPro = u.plan === 'pro'; const isElite = u.plan === 'elite';
+                        const planIcon = isElite ? '🔥' : (isPro ? '⭐' : '');
+                        return `<div class="flex items-center gap-3 p-3 hover:bg-[var(--surface-hover)] cursor-pointer rounded-lg transition-colors border border-transparent hover:border-[var(--border-color)]" onclick="app.ui.closeModal('modal-search'); app.social.loadProfile('${safeUsername}')">${avatar}<div><p class="font-semibold text-sm text-primary flex items-center gap-1">${safeName} ${u.is_verified?'<span class="text-accent"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z"/></svg></span>':''} <span class="text-[10px]">${planIcon}</span></p><p class="text-[10px] text-secondary">@${safeUsername}</p></div></div>`;
                     }).join('');
                     app.ui.setHTML('search-results', html);
                 } catch(e) { console.error(e); app.ui.setHTML('search-results', '<p class="text-red-500 text-sm text-center py-4">Error searching.</p>'); }
@@ -476,7 +768,7 @@
         };
 
         // ==========================================
-        // EXTENSION: COMMENTS MODULE
+        // COMMENTS MODULE
         // ==========================================
         app.comments = {
             activePostId: null,
@@ -488,7 +780,7 @@
             },
             fetchComments: async () => {
                 try {
-                    const { data, error } = await window.supabase.from('comments').select('id, content, created_at, profiles(username, display_name, avatar_url)').eq('post_id', app.comments.activePostId).order('created_at', { ascending: false }).limit(50);
+                    const { data, error } = await window.supabase.from('comments').select('id, content, created_at, profiles(*)').eq('post_id', app.comments.activePostId).order('created_at', { ascending: false }).limit(50);
                     if(error) throw error;
                     if(!data || data.length === 0) return app.ui.setHTML('comment-list', '<p class="text-secondary text-sm text-center py-4">No comments yet. Be the first!</p>');
                     
@@ -527,7 +819,7 @@
         };
 
         // ==========================================
-        // EXTENSION: NOTIFICATIONS MODULE
+        // NOTIFICATIONS MODULE
         // ==========================================
         app.notifications = {
             checkUnread: async () => {
@@ -548,7 +840,7 @@
             fetchNotifications: async () => {
                 if(!app.state.currentUser) return;
                 try {
-                    const { data, error } = await window.supabase.from('notifications').select('id, type, created_at, is_read, sender:profiles!notifications_sender_id_fkey(username, display_name, avatar_url)').eq('receiver_id', app.state.currentUser.id).order('created_at', { ascending: false }).limit(30);
+                    const { data, error } = await window.supabase.from('notifications').select('id, type, created_at, is_read, sender:profiles!notifications_sender_id_fkey(*)').eq('receiver_id', app.state.currentUser.id).order('created_at', { ascending: false }).limit(30);
                     if(error) throw error;
                     
                     window.supabase.from('notifications').update({ is_read: true }).eq('receiver_id', app.state.currentUser.id).eq('is_read', false).then().catch(e => console.log(e));
@@ -571,7 +863,7 @@
         };
 
         // ==========================================
-        // EXTENSION: FOLLOWERS & FOLLOWING LISTS
+        // FOLLOWERS & FOLLOWING LISTS
         // ==========================================
         app.follows = {
             activeType: null,
@@ -587,14 +879,12 @@
                 if (!profileId) return;
 
                 try {
-                    // 1. Get current logged-in user's following list (to establish button states)
                     let myFollowingIds = new Set();
                     if (app.state.currentUser) {
                         const { data: myFollows } = await window.supabase.from('follows').select('following_id').eq('follower_id', app.state.currentUser.id);
                         if (myFollows) myFollows.forEach(f => myFollowingIds.add(f.following_id));
                     }
 
-                    // 2. Fetch the ID mappings natively and safely to avoid explicit foreign key guessing issues.
                     const matchCol = type === 'followers' ? 'following_id' : 'follower_id';
                     const extractCol = type === 'followers' ? 'follower_id' : 'following_id';
                     
@@ -606,9 +896,7 @@
                     }
 
                     const userIds = followData.map(f => f[extractCol]);
-
-                    // 3. Request actual profiles of those IDs
-                    const { data: profilesData, error: profError } = await window.supabase.from('profiles').select('id, username, display_name, avatar_url, is_verified').in('id', userIds);
+                    const { data: profilesData, error: profError } = await window.supabase.from('profiles').select('*').in('id', userIds);
                     if (profError) throw profError;
 
                     const html = profilesData.map(u => {
@@ -616,6 +904,9 @@
                         const safeUsername = app.utils.escapeHTML(u.username || 'unknown');
                         const avatar = u.avatar_url ? `<img src="${u.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-[var(--input-bg)] flex items-center justify-center text-primary font-bold">${safeName[0].toUpperCase()}</div>`;
                         const verif = u.is_verified ? `<span class="text-accent inline-block ml-1"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z"/></svg></span>` : '';
+                        
+                        const isPro = u.plan === 'pro'; const isElite = u.plan === 'elite';
+                        const planIcon = isElite ? '🔥' : (isPro ? '⭐' : '');
 
                         let followBtn = '';
                         if (app.state.currentUser && app.state.currentUser.id !== u.id) {
@@ -628,7 +919,7 @@
                             <div class="flex items-center gap-3">
                                 ${avatar}
                                 <div>
-                                    <p class="font-semibold text-sm text-primary flex items-center gap-1">${safeName} ${verif}</p>
+                                    <p class="font-semibold text-sm text-primary flex items-center gap-1">${safeName} ${verif} <span class="text-[10px]">${planIcon}</span></p>
                                     <p class="text-[10px] text-secondary">@${safeUsername}</p>
                                 </div>
                             </div>
@@ -645,15 +936,11 @@
             toggleFollow: async (btnEl, targetId, isFollowing) => {
                 if (!app.state.currentUser) return;
                 
-                // Optimistic UI for smooth response
                 const isNowFollowing = !isFollowing;
                 btnEl.innerText = isNowFollowing ? 'Following' : '+ Follow';
                 if(isNowFollowing) btnEl.classList.add('active'); else btnEl.classList.remove('active');
-                
-                // Update specific onclick handler for future taps on the same button
                 btnEl.onclick = (e) => { e.stopPropagation(); app.follows.toggleFollow(btnEl, targetId, isNowFollowing); };
 
-                // Execute background tasks safely
                 try {
                     if (isNowFollowing) {
                         await window.supabase.from('follows').insert([{ follower_id: app.state.currentUser.id, following_id: targetId }]);
@@ -661,8 +948,6 @@
                     } else {
                         await window.supabase.from('follows').delete().eq('follower_id', app.state.currentUser.id).eq('following_id', targetId);
                     }
-                    
-                    // Background refresh profile UI stat numbers if active
                     if (app.state.activeProfileId) {
                         const { count: fCount } = await window.supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', app.state.activeProfileId);
                         const { count: fwCount } = await window.supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', app.state.activeProfileId);
@@ -673,6 +958,9 @@
             }
         };
 
+        // ==========================================
+        // HOME PRESETS
+        // ==========================================
         app.homePresets = {
             activeCard: null,
             toggle: (cardEl, presetId, presetName) => {
@@ -794,27 +1082,29 @@
                     
                     if (session) {
                         app.state.currentUser = session.user;
+                        await app.subscription.fetchUserPlan();
                         const name = session.user?.user_metadata?.full_name || session.user?.email || 'User';
                         const el = document.getElementById('welcome-text');
                         if (el) { el.innerText = `Welcome, ${name}`; el.classList.remove('hidden'); }
-                        app.ui.switchView('home');
+                        if (app.ui) app.ui.switchView('home');
                         app.studio.presets.fetchPresets();
                         app.notifications.checkUnread();
                     } else { 
-                        app.state.currentUser = null; app.ui.switchView('auth'); 
+                        app.state.currentUser = null; 
+                        if (app.ui) app.ui.switchView('auth'); 
                     }
 
                     window.supabase.auth.onAuthStateChange((event, currentSession) => {
                         if (event === 'SIGNED_OUT') {
                             app.state.currentUser = null;
-                            app.ui.switchView('auth');
+                            if (app.ui) app.ui.switchView('auth');
                         }
                     });
 
                 } catch (err) {
                     console.error("Session check failed:", err);
                     app.state.currentUser = null; 
-                    app.ui.switchView('auth');
+                    if(app.ui) app.ui.switchView('auth');
                 }
             },
             toggleAuthMode: () => {
@@ -857,6 +1147,7 @@
                     } else {
                         if (data?.session) {
                             app.state.currentUser = data.user;
+                            await app.subscription.fetchUserPlan();
                             const wEl = document.getElementById('welcome-text');
                             if (wEl) { wEl.innerText = `Welcome, ${data.user?.user_metadata?.full_name || data.user?.email || 'User'}`; wEl.classList.remove('hidden'); }
                             app.ui.switchView('home');
@@ -884,6 +1175,7 @@
                         if(errorEl) { errorEl.innerText = error.message; errorEl.classList.remove('hidden'); } 
                     } else if (data?.session) {
                         app.state.currentUser = data.user;
+                        await app.subscription.fetchUserPlan();
                         const wEl = document.getElementById('welcome-text');
                         if (wEl) { wEl.innerText = `Welcome, ${data.user?.user_metadata?.full_name || data.user?.email || 'User'}`; wEl.classList.remove('hidden'); }
                         window.history.pushState({}, '', '/'); 
@@ -903,6 +1195,7 @@
                 
                 app.studio.audioEngine.stopAudio();
                 app.studio.audioEngine.unmount();
+                if(app.explorePlayer) app.explorePlayer.pause();
                 app.ui.switchView('auth');
             }
         };
@@ -1000,9 +1293,13 @@
                         app.ui.setText('studio-track-title', (name || '').replace(/\.[^/.]+$/, ""));
                         const authorEl = document.getElementById('studio-track-author');
                         if (authorEl) { if (trackAuthor) { authorEl.innerText = `by @${trackAuthor}`; authorEl.classList.remove('hidden'); } else { authorEl.classList.add('hidden'); } }
-                        app.studio.state.pausedAt = 0; app.ui.setVal('seek-slider', 0); app.studio.UI.updateSeekUI(); app.ui.switchView('studio'); 
+                        app.studio.state.pausedAt = 0; app.ui.setVal('seek-slider', 0); app.studio.UI.updateSeekUI(); 
+                        
+                        // We do not switch view here if it's a DBLoad because we already switched instantly for UX
+                        if(!isDBLoad) app.ui.switchView('studio'); 
+                        
                         if (!isDBLoad) { if (app.studio.state.pendingPreset) { app.studio.presets.applyScalablePreset(app.studio.state.pendingPreset); app.studio.state.pendingPreset = null; } else { app.studio.presets.applyScalablePreset('Studio Neutral'); } app.studio.audioEngine.startAudio(); }
-                    } catch (err) { alert("Error decoding file."); console.error(err); }
+                    } catch (err) { alert("Error decoding file. Note: Mobile Safari requires user interaction before Audio Context works."); console.error(err); }
                 },
                 triggerLibraryUpload: (title, presetType) => { app.studio.state.pendingPreset = presetType; const fi = document.getElementById('file-input'); if(fi) fi.click(); },
                 startAudio: () => {
@@ -1091,7 +1388,18 @@
                     app.studio.visualizer.init();
                     document.querySelectorAll('#view-studio .daw-slider').forEach(slider => { slider.addEventListener('input', (e) => { if(e.target.id === 'seek-slider') { app.studio.state.isDraggingSeek = true; app.ui.updateSliderTrack(e.target); app.ui.setText('time-current', app.studio.UI.formatTime((e.target.value / 100) * (app.studio.state.buffer?.duration || 0))); return; } app.studio.presets.setCustomBadge(); app.ui.updateSliderTrack(e.target); app.studio.UI.updateSliderTextUI(e.target); app.studio.audioEngine.updateEffects(); }); });
                     const seekSlider = document.getElementById('seek-slider'); if(seekSlider) { seekSlider.addEventListener('change', (e) => { const pos = (e.target.value / 100) * (app.studio.state.buffer?.duration || 0); const wasPlaying = app.studio.state.isPlaying; if (wasPlaying) app.studio.audioEngine.stopAudio(); app.studio.state.pausedAt = pos; if (wasPlaying) app.studio.audioEngine.startAudio(); app.studio.state.isDraggingSeek = false; }); }
-                    ['toggle-pan8d'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', () => { app.studio.presets.setCustomBadge(); app.studio.audioEngine.updateEffects(); }); }); app.studio.presets.renderUI();
+                    ['toggle-pan8d'].forEach(id => { 
+                        const el = document.getElementById(id); 
+                        if (el) el.addEventListener('change', (e) => { 
+                            if (e.target.checked && app.state.userPlan !== 'elite') {
+                                e.target.checked = false;
+                                app.ui.showToast("Immersive 8D is an Elite-exclusive feature.");
+                                app.subscription.openModal();
+                                return;
+                            }
+                            app.studio.presets.setCustomBadge(); app.studio.audioEngine.updateEffects(); 
+                        }); 
+                    }); app.studio.presets.renderUI();
                 },
                 updateSliderTextUI: (el) => { if (!el || !el.id) return; const id = el.id.replace('slider-', ''); const val = el.value; if(id.startsWith('eq')) app.ui.setText(`val-${id}`, (val>0?'+':'')+val+'dB'); else app.ui.setText(`val-${id}`, val+(id==='speed'?'x':'%')); },
                 updatePlayState: () => { const pl = document.getElementById('icon-play'); if(pl) pl.classList.toggle('hidden', app.studio.state.isPlaying); const pa = document.getElementById('icon-pause'); if(pa) pa.classList.toggle('hidden', !app.studio.state.isPlaying); },
@@ -1101,11 +1409,24 @@
         };
 
         // ==========================================
-        // DATABASE & LIBRARY INTEGRATION
+        // LIBRARY MODULE (FAST LOADING)
         // ==========================================
         app.library = {
             saveProjectToLibrary: async () => {
                 if(!app.state.rawFileBlob || !app.state.currentUser || !window.supabase) return alert("Error: Not logged in or no file selected.");
+                
+                if(app.state.userPlan === 'free') {
+                    app.ui.showLoader("CHECKING", "Verifying cloud limits...", 50);
+                    const { count } = await window.supabase.from('projects').select('*', {count: 'exact', head:true}).eq('user_id', app.state.currentUser.id);
+                    if(count >= 5) {
+                        app.ui.hideLoader();
+                        app.ui.closeModal('modal-studio-menu');
+                        app.subscription.openModal();
+                        app.ui.showToast("Free plan limit reached (5 projects max).");
+                        return;
+                    }
+                }
+
                 app.ui.showLoader("SAVING", "Initializing cloud insertion...", 20);
                 try {
                     const tEl = document.getElementById('studio-track-title');
@@ -1173,7 +1494,7 @@
                             <div><h4 class="font-semibold text-sm text-primary">${safeName}</h4><p class="text-[10px] text-secondary mt-1">${p.created_at ? new Date(p.created_at).toLocaleDateString() : ''}</p></div>
                             <div class="flex gap-2 items-center">
                                 ${visBtn}
-                                <button onclick="app.library.loadProjectFromDB('${p.id}', '${p.file_path || ''}')" class="btn-outline border-none text-accent px-2">Load</button>
+                                <button onclick="app.library.loadProjectFromDB('${p.id}', '${p.file_path || ''}')" class="btn-outline border-none text-accent px-2">Load in Studio</button>
                                 <button onclick="app.library.deleteProject('${p.id}', '${p.file_path || ''}')" class="btn-outline border-none text-red-500 px-2">Del</button>
                             </div>
                         </div>`;
@@ -1190,24 +1511,42 @@
                     if (error) throw error;
                 } catch(e) { console.error(e); alert("Failed to delete track."); } finally { app.ui.hideLoader(); app.library.loadLibrary(); }
             },
+            
+            // UX UPDATE: Instant Visual Feedback upon loading from Library
             loadProjectFromDB: async (id, filePath, authorName = null) => {
                 if (!filePath) { alert("Audio file is missing for this track."); return; }
-                app.ui.showLoader("LOADING", "Getting secure link...", 30);
+                
+                // 1. Instantly switch to Studio view to give user immediate response
+                if(app.explorePlayer) app.explorePlayer.pause();
+                app.ui.switchView('studio');
+                app.ui.setText('studio-track-title', 'Loading from cloud...');
+                app.ui.showLoader("CONNECTING", "Establishing secure stream...", 15);
+                
                 try {
                     const { data: urlData, error: urlError } = await window.supabase.storage.from('app-files').createSignedUrl(filePath, 3600); 
                     if (urlError) throw urlError;
-                    app.ui.showLoader("LOADING", "Downloading audio...", 50);
-                    const response = await fetch(urlData.signedUrl); if (!response.ok) throw new Error("File unavailable.");
+                    
+                    app.ui.showLoader("DOWNLOADING", "Buffering audio file...", 40);
+                    const response = await fetch(urlData.signedUrl); 
+                    if (!response.ok) throw new Error("File unavailable.");
                     const blob = await response.blob();
-                    app.ui.showLoader("LOADING", "Applying studio parameters...", 80);
-                    const { data: pData, error: dbError } = await window.supabase.from('projects').select('*').eq('id', id).single();
+                    
+                    app.ui.showLoader("DECODING", "Processing high-res audio format...", 70);
+                    
+                    // Fetch Database settings in parallel with decoding processing to save time
+                    const dbPromise = window.supabase.from('projects').select('*').eq('id', id).single();
+                    window.supabase.rpc('increment_play_count', { track_id: id }).then().catch(e=>{});
+
+                    const { data: pData, error: dbError } = await dbPromise;
                     if (dbError) throw dbError;
                     
-                    window.supabase.rpc('increment_play_count', { track_id: id }).then().catch(e=>console.log(e));
-
-                    app.state.rawFileBlob = blob; app.state.rawFileBlob.name = (pData.name || 'track') + ".wav"; 
+                    app.state.rawFileBlob = blob; 
+                    app.state.rawFileBlob.name = (pData.name || 'track') + ".wav"; 
+                    
+                    // Heavy operation (decodeAudioData happens here)
                     await app.studio.audioEngine.processBlob(app.state.rawFileBlob, pData.name, true, authorName);
                     
+                    app.ui.showLoader("APPLYING", "Setting up studio parameters...", 90);
                     const p = pData.settings || {};
                     app.studio.presets.animateSlider('slider-speed', p.speed ?? 1); 
                     app.studio.presets.animateSlider('slider-eqL', p.eqL ?? 0); 
@@ -1222,17 +1561,23 @@
                     const t8d = document.getElementById('toggle-pan8d'); if(t8d) t8d.checked = p.pan8d ?? false;
 
                     app.studio.presets.setCustomBadge();
-                    app.studio.audioEngine.startAudio(); app.ui.hideLoader();
-                } catch(e) { if(e) console.error(e); app.ui.hideLoader(); alert("Failed to load track."); }
+                    app.studio.audioEngine.startAudio(); 
+                    app.ui.hideLoader();
+                } catch(e) { 
+                    console.error(e); 
+                    app.ui.hideLoader(); 
+                    alert("Failed to load track."); 
+                    app.ui.switchView('home');
+                }
             }
         };
 
         // ==========================================
-        // SOCIAL & PROFILES
+        // SOCIAL MODULE
         // ==========================================
         app.social = {
             loadExplore: async (sortType = 'trending') => {
-                if (!app.state.currentUser) return app.ui.switchView('auth');
+                if (!app.state.currentUser) { if(app.ui) app.ui.switchView('auth'); return; }
                 app.ui.switchView('explore');
                 const tt = document.getElementById('tab-explore-trending'); if(tt) tt.className = `text-sm font-semibold pb-2 border-b-2 ${sortType === 'trending' ? 'border-accent text-primary' : 'border-transparent text-secondary hover:text-primary'}`;
                 const tn = document.getElementById('tab-explore-new'); if(tn) tn.className = `text-sm font-semibold pb-2 border-b-2 ${sortType === 'new' ? 'border-accent text-primary' : 'border-transparent text-secondary hover:text-primary'}`;
@@ -1241,7 +1586,7 @@
                 
                 try {
                     let query = window.supabase.from('projects')
-                        .select(`id, name, file_path, plays_count, likes_count, created_at, profiles!projects_user_id_fkey (username, display_name, avatar_url, is_verified), project_likes (user_id)`)
+                        .select(`id, name, file_path, plays_count, likes_count, created_at, profiles!projects_user_id_fkey (*), project_likes (user_id)`)
                         .eq('is_public', true);
                         
                     if (sortType === 'trending') query = query.order('plays_count', { ascending: false }); else query = query.order('created_at', { ascending: false });
@@ -1263,16 +1608,37 @@
                         const avatar = prof.avatar_url ? `<img src="${prof.avatar_url}" class="w-10 h-10 rounded-full object-cover border border-[var(--border-color)]">` : `<div class="w-10 h-10 rounded-full bg-[var(--input-bg)] flex items-center justify-center text-primary font-bold">${char}</div>`;
                         const verif = prof.is_verified ? `<span class="text-accent inline-block ml-1"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z"/></svg></span>` : '';
                         
+                        const priorityBadge = prof.plan === 'elite' ? `<span class="text-[8px] bg-amber-500 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ml-2">Priority</span>` : '';
+
+                        // UX UPDATE: Feed Inline Player replacing instant Studio load
                         return `
-                        <div class="surface-card shadow-sm p-5 space-y-4">
+                        <div class="surface-card shadow-sm p-5 space-y-4" id="explore-card-${t.id}" data-track-id="${t.id}">
                             <div class="flex gap-3 items-center cursor-pointer" onclick="app.social.loadProfile('${safeUsername}')">
                                 ${avatar}
-                                <div class="flex-1"><p class="font-semibold text-sm text-primary leading-tight flex items-center">${safeName}${verif}</p><p class="text-[10px] text-secondary">@${safeUsername}</p></div>
+                                <div class="flex-1"><p class="font-semibold text-sm text-primary leading-tight flex items-center">${safeName}${verif} ${priorityBadge}</p><p class="text-[10px] text-secondary">@${safeUsername}</p></div>
                             </div>
-                            <div class="flex justify-between items-center bg-[var(--input-bg)] p-4 rounded-xl border border-[var(--border-color)]">
-                                <div class="overflow-hidden mr-4"><h4 class="font-bold text-primary truncate">${safeTrackName}</h4><p class="text-xs text-secondary mt-0.5">${t.plays_count || 0} plays</p></div>
-                                <button onclick="app.library.loadProjectFromDB('${t.id}', '${t.file_path}', '${safeUsername}')" class="w-10 h-10 flex-shrink-0 rounded-full bg-[var(--text-primary)] text-[var(--bg-color)] flex items-center justify-center hover:scale-105 transition-transform"><svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" class="ml-1"><path d="M8 5v14l11-7z"/></svg></button>
+                            
+                            <div class="bg-[var(--input-bg)] p-3 rounded-xl border border-[var(--border-color)]">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-bold text-primary truncate text-sm mr-2">${safeTrackName}</h4>
+                                    <span class="text-[10px] text-secondary font-mono shrink-0" id="explore-time-${t.id}">0:00</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-[var(--border-color)] rounded-full mb-3 overflow-hidden">
+                                    <div id="explore-progress-${t.id}" class="h-full bg-[var(--accent-color)] w-0 transition-all duration-100 ease-linear"></div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <button onclick="app.explorePlayer.toggle('${t.id}', '${t.file_path}')" class="w-8 h-8 rounded-full bg-[var(--text-primary)] text-[var(--bg-color)] flex items-center justify-center hover:scale-105 transition-transform">
+                                        <svg id="explore-play-${t.id}" class="explore-play-icon w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                        <svg id="explore-pause-${t.id}" class="explore-pause-icon w-4 h-4 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                    </button>
+                                    
+                                    <button onclick="app.library.loadProjectFromDB('${t.id}', '${t.file_path}', '${safeUsername}')" class="text-xs font-semibold text-accent hover:text-primary transition-colors flex items-center gap-1">
+                                        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                        Open in Studio
+                                    </button>
+                                </div>
                             </div>
+
                             <div class="flex gap-4 pt-1">
                                 <button onclick="app.social.toggleTrackLike('${t.id}', ${isLiked})" class="flex items-center gap-1.5 text-xs font-medium transition-colors ${isLiked ? 'text-red-500' : 'text-secondary hover:text-primary'}"><svg width="16" height="16" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>${t.likes_count || 0}</button>
                             </div>
@@ -1285,7 +1651,7 @@
                 }
             },
             loadProfile: async (usernameOrId = null) => {
-                if (!app.state.currentUser) return app.ui.switchView('auth');
+                if (!app.state.currentUser) { if(app.ui) app.ui.switchView('auth'); return; }
                 app.ui.showLoader("LOADING", "Fetching profile data...", 30);
                 app.ui.switchView('social');
                 try {
@@ -1293,7 +1659,7 @@
                     if (!usernameOrId) {
                         let { data, error } = await window.supabase.from('profiles').select('*').eq('id', app.state.currentUser.id).single();
                         if (error && error.code === 'PGRST116') {
-                            const fallbackData = { id: app.state.currentUser.id, username: 'user_' + app.state.currentUser.id.substring(0, 8), display_name: app.state.currentUser.user_metadata?.full_name || 'Creator' };
+                            const fallbackData = { id: app.state.currentUser.id, username: 'user_' + app.state.currentUser.id.substring(0, 8), display_name: app.state.currentUser.user_metadata?.full_name || 'Creator', plan: 'free' };
                             const { data: newProfile, error: insErr } = await window.supabase.from('profiles').insert([fallbackData]).select().single();
                             if (insErr) throw insErr; profile = newProfile;
                         } else if (error) throw error; else profile = data;
@@ -1306,13 +1672,69 @@
                     app.state.activeProfileId = profile.id;
                     
                     const safeName = app.utils.escapeHTML(profile.display_name || 'Unknown');
-                    app.ui.setHTML('profile-name', `${safeName} ${profile.is_verified ? '<span class="text-accent inline-block ml-1"><svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.9 14.7L6 12.6l1.5-1.5 2.6 2.6 6.4-6.4 1.5 1.5-7.9 7.9z"/></svg></span>' : ''}`);
+                    app.ui.setText('profile-name', safeName);
+                    
+                    const verifEl = document.getElementById('profile-verified');
+                    if(verifEl) profile.is_verified ? verifEl.classList.remove('hidden') : verifEl.classList.add('hidden');
+                    
+                    const planBadgeMap = {
+                        free: `<span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-[var(--surface-hover)] text-secondary border border-[var(--border-color)] ml-2">Free</span>`,
+                        pro: `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 ml-2">⭐ PRO</span>`,
+                        elite: `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 ml-2">🔥 ELITE</span>`
+                    };
+                    app.ui.setHTML('profile-plan-badge', planBadgeMap[profile.plan || 'free']);
+
                     app.ui.setText('profile-username', profile.username || '');
                     app.ui.setText('profile-bio', profile.bio || "No bio provided yet.");
                     app.ui.setText('stat-total-plays', profile.total_plays || 0);
                     app.ui.setText('stat-followers', profile.followers_count || 0);
                     app.ui.setText('stat-following', profile.following_count || 0);
                     
+                    const analyticsDiv = document.getElementById('profile-analytics-container');
+                    const upgradeContainer = document.getElementById('profile-upgrade-card-container');
+                    
+                    if(profile.id === app.state.currentUser.id) {
+                        // Analytics Display
+                        if(profile.plan === 'pro' || profile.plan === 'elite') {
+                            if(analyticsDiv) analyticsDiv.classList.remove('hidden');
+                            const { count: uploadCount } = await window.supabase.from('projects').select('*', { count: 'exact', head: true }).eq('user_id', profile.id);
+                            const { data: pData } = await window.supabase.from('projects').select('likes_count').eq('user_id', profile.id);
+                            let sumLikes = 0; if (pData) pData.forEach(p => sumLikes += p.likes_count || 0);
+                            
+                            app.ui.setText('analytics-uploads', uploadCount || 0);
+                            app.ui.setText('analytics-likes', sumLikes);
+                        } else {
+                            if(analyticsDiv) analyticsDiv.classList.add('hidden');
+                        }
+                        
+                        // UX UPDATE: Profile Upgrade Card
+                        if (app.state.userPlan !== 'elite' && upgradeContainer) {
+                            const isFree = app.state.userPlan === 'free';
+                            const targetPlan = isFree ? 'Pro' : 'Elite';
+                            upgradeContainer.innerHTML = `
+                                <div class="px-6 mb-6">
+                                    <div class="p-5 rounded-2xl bg-gradient-to-br from-[var(--accent-color)]/10 to-transparent border border-[var(--accent-color)]/20 flex flex-col items-start">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-accent text-lg">✨</span>
+                                            <h4 class="text-sm font-bold text-primary">Unlock More Creative Power</h4>
+                                        </div>
+                                        <p class="text-xs text-secondary mb-4 leading-relaxed pr-4">Upgrade to ${targetPlan} for unlimited exports, cloud storage, and advanced audio tools.</p>
+                                        <div class="flex items-center gap-4 w-full">
+                                            <button onclick="app.subscription.openModal()" class="bg-[var(--accent-color)] text-white text-xs font-semibold px-5 py-2 rounded-full hover:opacity-90 transition-opacity shadow-sm">View Plans</button>
+                                            <span class="text-[10px] text-secondary">You're currently on the ${app.state.userPlan.toUpperCase()} plan</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            upgradeContainer.classList.remove('hidden');
+                        } else if (upgradeContainer) {
+                            upgradeContainer.classList.add('hidden');
+                        }
+                    } else {
+                        if(analyticsDiv) analyticsDiv.classList.add('hidden');
+                        if(upgradeContainer) upgradeContainer.classList.add('hidden');
+                    }
+
                     const bannerEl = document.getElementById('profile-banner');
                     if(bannerEl) bannerEl.style.backgroundImage = profile.banner_url ? `url(${profile.banner_url})` : '';
 
@@ -1376,7 +1798,7 @@
                 app.ui.setHTML('profile-wall-feed', `<p class="text-secondary text-sm">Loading updates...</p>`);
                 try {
                     const { data, error } = await window.supabase.from('posts')
-                        .select(`id, content, created_at, user_id, profiles!posts_user_id_fkey (username, display_name, avatar_url), likes (user_id)`)
+                        .select(`id, content, created_at, user_id, profiles!posts_user_id_fkey (*), likes (user_id)`)
                         .eq('user_id', userId)
                         .order('created_at', { ascending: false });
                         
@@ -1395,7 +1817,10 @@
                         const avatar = prof.avatar_url ? `<img src="${prof.avatar_url}" class="w-10 h-10 rounded-full object-cover">` : `<div class="w-10 h-10 rounded-full bg-[var(--input-bg)] flex items-center justify-center text-primary font-bold">${char}</div>`;
                         const delBtn = post.user_id === app.state.currentUser?.id ? `<button onclick="app.social.deletePost('${post.id}')" class="text-red-500 hover:underline text-[10px]">Delete</button>` : '';
                         
-                        return `<div class="surface-card p-5 space-y-3 mb-4"><div class="flex justify-between items-start"><div class="flex gap-3 items-center cursor-pointer" onclick="app.social.loadProfile('${safeUsername}')">${avatar}<div><p class="font-semibold text-sm text-primary leading-tight">${safeName}</p><p class="text-[10px] text-secondary">@${safeUsername} • ${post.created_at ? new Date(post.created_at).toLocaleDateString() : ''}</p></div></div>${delBtn}</div><p class="text-sm text-primary leading-relaxed whitespace-pre-wrap">${safeContent}</p><div class="flex gap-4 pt-2 border-t border-[var(--border-color)]">
+                        const isPro = prof.plan === 'pro'; const isElite = prof.plan === 'elite';
+                        const planIcon = isElite ? '🔥' : (isPro ? '⭐' : '');
+
+                        return `<div class="surface-card p-5 space-y-3 mb-4"><div class="flex justify-between items-start"><div class="flex gap-3 items-center cursor-pointer" onclick="app.social.loadProfile('${safeUsername}')">${avatar}<div><p class="font-semibold text-sm text-primary leading-tight">${safeName} <span class="text-[10px]">${planIcon}</span></p><p class="text-[10px] text-secondary">@${safeUsername} • ${post.created_at ? new Date(post.created_at).toLocaleDateString() : ''}</p></div></div>${delBtn}</div><p class="text-sm text-primary leading-relaxed whitespace-pre-wrap">${safeContent}</p><div class="flex gap-4 pt-2 border-t border-[var(--border-color)]">
                             <button onclick="app.social.togglePostLike('${post.id}', ${isLiked})" class="flex items-center gap-1.5 text-xs font-medium transition-colors ${isLiked ? 'text-red-500' : 'text-secondary hover:text-primary'}"><svg width="16" height="16" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>${post.likes ? post.likes.length : 0}</button>
                             <button onclick="app.comments.openModal('${post.id}')" class="flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-primary transition-colors"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>Comment</button>
                         </div></div>`;
@@ -1498,4 +1923,4 @@
 
     </script>
 </body>
-    </html>
+                    </html>
